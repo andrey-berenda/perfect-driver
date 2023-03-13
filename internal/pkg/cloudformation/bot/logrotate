@@ -1,0 +1,5 @@
+/var/log/bot.log {
+    rotate 4
+    daily
+    create 644 root root
+}

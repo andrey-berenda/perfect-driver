@@ -1,0 +1,78 @@
+version: '3'
+
+vars:
+  COMMIT_ID: $(git log --format="%h" -n 1)
+  PROD_DB_ADDRESS: $(aws rds describe-db-instances --db-instance-identifier db --query 'DBInstances[*].Endpoint.Address' --profile driver --output text)
+  ROOT: $(pwd)
+  BIN_LINUX: $(echo {{.ROOT}}/bin/bot)
+  EC2_ADDRESS: $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=Stack/EC2Instance' --query 'Reservations[*].Instances[*].PublicDnsName' --profile driver --output text)
+
+silent: true
+
+env:
+  GOOSE_DRIVER: postgres
+
+tasks:
+  default:
+    cmds:
+      - task --list-all
+
+  aws-account-id:
+    cmds:
+      - aws sts get-caller-identity --output text --query Account --profile driver | cat
+
+  _db:
+    cmds:
+      - dropdb --if-exists {{.DB_NAME}}
+      - createdb {{.DB_NAME}}
+      - GOOSE_DBSTRING="user=postgres dbname={{.DB_NAME}} sslmode=disable" goose -dir migrations up
+
+  db:
+    cmds:
+      - task: _db
+        vars:
+          DB_NAME: perfect_driver
+
+  testdb:
+    cmds:
+      - task: _db
+        vars:
+          DB_NAME: perfect_driver_test
+
+  proddb:
+    cmds:
+      - GOOSE_DBSTRING="{{.GOOSE_DBSTRING}}" goose -dir migrations up
+    vars:
+      GOOSE_DBSTRING: user=driveruser password=de3d8207-7077-44e4-a2f8-2efdfe085f51 host={{.PROD_DB_ADDRESS}} dbname=postgres sslmode=disable
+
+  build:
+    cmds:
+      - GOOS=linux GOARCH=amd64 go build  -o {{.BIN_LINUX}} -ldflags="-X 'github.com/andrey-berenda/perfect-driver/internal/pkg/log.commitID="{{.COMMIT_ID}}"'" {{.ROOT}}/cmd/perfect-driver
+
+  get-ec2-connect-command:
+    cmds:
+      - echo ssh ec2-user@{{.EC2_ADDRESS}}
+
+  lint:
+    cmds:
+      - golangci-lint run
+
+  test:
+    deps:
+      - lint
+      - testdb
+    cmds:
+      - go test ./...
+
+  deploy-infra:
+    cmds:
+      - cdk deploy --profile driver
+    silent: false
+
+  copy-to-ec2:
+    deps:
+      - build
+      - test
+    cmds:
+      - scp bin/bot ec2-user@ec2-3-236-208-235.compute-1.amazonaws.com:~
+    silent: false

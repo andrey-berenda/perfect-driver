@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build " type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="sober-driver" />
+    <working_directory value="$PROJECT_DIR$" />
+    <go_parameters value="-ldflags=&quot;-X 'github.com/andrey-berenda/perfect-driver/internal/pkg/log.commitID=commitID'&quot;" />
+    <envs>
+      <env name="LOG_PATH" value="stdout" />
+      <env name="TELEGRAM_TOKEN" value="6281856678:AAGQdSTnZwoU5SPjXsa8IKVVnbZmriqS-0c" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/andrey-berenda/perfect-driver/cmd/sober-driver" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/sober-driver/main.go" />
+    <method v="2" />
+  </configuration>
+</component>
