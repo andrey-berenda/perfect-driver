@@ -21,7 +21,7 @@ import (
 
 func main() {
 	time.Local = time.UTC
-	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 
 	logger := log.NewLogger()
 	driverBot, err := telego.NewBot("6281856678:AAGQdSTnZwoU5SPjXsa8IKVVnbZmriqS-0c")
@@ -55,34 +55,41 @@ func main() {
 
 	wg.Add(1)
 	go func() {
-		updates, _ := driverBot.UpdatesViaLongPolling(&telego.GetUpdatesParams{
+		updates, err := driverBot.UpdatesViaLongPolling(&telego.GetUpdatesParams{
 			Timeout: 10,
 			AllowedUpdates: []string{
-				"message",
-				"callback_query",
-				"channel_post",
+				telego.MessageUpdates,
+				telego.CallbackQueryUpdates,
+				telego.ChannelPostUpdates,
 			},
 		})
-
+		if err != nil {
+			cancel()
+			logger.Errorf("driverBot.UpdatesViaLongPolling: %v", err)
+			return
+		}
 		logger.Info("Starting handle driver messages")
 		b.HandleCustomerUpdates(updates)
 		logger.Info("Handling messages driver stopped")
 		wg.Done()
+
 	}()
 
 	wg.Add(1)
 	go func() {
-		updates, _ := customerBot.UpdatesViaLongPolling(&telego.GetUpdatesParams{
+		updates, err := customerBot.UpdatesViaLongPolling(&telego.GetUpdatesParams{
 			Timeout: 10,
 			AllowedUpdates: []string{
-				"chat_join_request",
-				"message",
-				"callback_query",
-				"channel_post",
-				// "edited_message",
-				"channel_post",
+				telego.MessageUpdates,
+				telego.CallbackQueryUpdates,
+				telego.ChannelPostUpdates,
 			},
 		})
+		if err != nil {
+			cancel()
+			logger.Errorf("driverBot.UpdatesViaLongPolling: %v", err)
+			return
+		}
 
 		logger.Info("Starting handle customer messages")
 		b.HandleCustomerUpdates(updates)
