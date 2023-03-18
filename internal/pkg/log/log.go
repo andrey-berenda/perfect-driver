@@ -3,7 +3,6 @@ package log
 import (
 	"os"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -15,26 +14,8 @@ func UserID(userID uuid.UUID) zap.Field {
 	return zap.String("user_id", userID.String())
 }
 
-type botLogger struct {
-	logger *zap.SugaredLogger
-}
-
-func NewBotLogger(logger *zap.SugaredLogger) tgbotapi.BotLogger {
-	return botLogger{logger: logger}
-}
-
-func (b botLogger) Println(v ...interface{}) {
-	if len(v) == 1 {
-		err, ok := v[0].(error)
-		if ok {
-			b.logger.Error(err)
-			return
-		}
-	}
-	b.logger.Info(v...)
-}
-func (b botLogger) Printf(format string, v ...interface{}) {
-	b.logger.Infof(format, v...)
+func PaymentID(paymentID uuid.UUID) zap.Field {
+	return zap.String("payment_id", paymentID.String())
 }
 
 func NewLogger() *zap.SugaredLogger {

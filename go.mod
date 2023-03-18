@@ -1,6 +1,6 @@
 module github.com/andrey-berenda/perfect-driver
 
-go 1.19
+go 1.20
 
 require (
 	github.com/aws/aws-cdk-go/awscdk/v2 v2.68.0
@@ -8,7 +8,6 @@ require (
 	github.com/aws/aws-lambda-go v1.38.0
 	github.com/aws/constructs-go/constructs/v10 v10.1.274
 	github.com/aws/jsii-runtime-go v1.77.0
-	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/mymmrac/telego v0.21.1

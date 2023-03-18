@@ -8,7 +8,7 @@
       <env name="TELEGRAM_TOKEN" value="6281856678:AAGQdSTnZwoU5SPjXsa8IKVVnbZmriqS-0c" />
     </envs>
     <kind value="PACKAGE" />
-    <package value="github.com/andrey-berenda/perfect-driver/cmd/sober-driver" />
+    <package value="github.com/andrey-berenda/perfect-driver/cmd/perfect-driver" />
     <directory value="$PROJECT_DIR$" />
     <filePath value="$PROJECT_DIR$/cmd/sober-driver/main.go" />
     <method v="2" />

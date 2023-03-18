@@ -12,7 +12,7 @@ CREATE INDEX ON users (telegram_id);
 
 CREATE TABLE orders
 (
-    id          BIGSERIAL,
+    id          BIGSERIAL PRIMARY KEY,
     user_id     UUID references users (id),
     telegram_id BIGINT,
     source      text,

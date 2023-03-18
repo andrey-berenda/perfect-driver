@@ -11,6 +11,9 @@ import (
 	"github.com/mymmrac/telego/telegoutil"
 	"go.uber.org/zap"
 
+	"github.com/andrey-berenda/perfect-driver/internal/pkg/log"
+	"github.com/andrey-berenda/perfect-driver/internal/pkg/models"
+	"github.com/andrey-berenda/perfect-driver/internal/pkg/processing"
 	"github.com/andrey-berenda/perfect-driver/internal/pkg/storage"
 )
 
@@ -22,6 +25,7 @@ type CallbackHandler func(ctx context.Context, callback telego.CallbackQuery)
 type Bot struct {
 	driverBot        *telego.Bot
 	customerBot      *telego.Bot
+	processor        processing.Processor
 	store            *storage.Store
 	driversChatID    int64
 	handlers         []MessageHandler
@@ -35,6 +39,7 @@ var arrived = "arrived"
 func New(
 	driverBot *telego.Bot,
 	customerBot *telego.Bot,
+	processor processing.Processor,
 	store *storage.Store,
 	logger *zap.SugaredLogger,
 	driversChatID int64,
@@ -42,6 +47,7 @@ func New(
 	b := &Bot{
 		driverBot:     driverBot,
 		customerBot:   customerBot,
+		processor:     processor,
 		store:         store,
 		logger:        logger,
 		driversChatID: driversChatID,
@@ -126,9 +132,15 @@ func (b *Bot) HandleArrived(ctx context.Context, cb telego.CallbackQuery) {
 			return
 		}
 	}
+
+	url, err := b.processor.CreatePayment(ctx, orderID)
+	if err != nil {
+		b.logger.Errorf("processor.CreatePayment: %s", err)
+	}
+
 	_, err = b.driverBot.SendMessage(&telego.SendMessageParams{
 		ChatID: telego.ChatID{ID: cb.From.ID},
-		Text:   "Заказ завершен",
+		Text:   fmt.Sprintf("Заказ завершен. Оплати пожалуйста его - %s", url),
 	})
 	if err != nil {
 		b.logger.Errorf("store.SendMessage: %s", err)
@@ -336,4 +348,40 @@ func (b *Bot) HandleMessage(ctx context.Context, update telego.Update) bool {
 	}
 
 	return true
+}
+
+func (b *Bot) CheckPayments(ctx context.Context, paymentsToCheck <-chan models.Payment) {
+	for payment := range paymentsToCheck {
+		b.CheckPayment(ctx, payment)
+	}
+}
+
+func (b *Bot) CheckPayment(ctx context.Context, payment models.Payment) {
+	logger := b.logger.With(log.PaymentID(payment.ID))
+	p, err := b.processor.CheckOrder(ctx, payment)
+	if err != nil {
+		logger.Errorf("processor.CheckOrder: %v", err)
+		return
+	}
+	if p.Status == models.PaymentStatusPending {
+		return
+	}
+
+	if p.Status != models.PaymentStatusSucceeded {
+		return
+	}
+
+	order, err := b.store.OrderGetByID(ctx, payment.OrderID)
+	if err != nil {
+		logger.Errorf("store.OrderGetByID: %v", err)
+		return
+	}
+	_, err = b.driverBot.SendMessage(&telego.SendMessageParams{
+		ChatID:    telego.ChatID{ID: order.TelegramID},
+		Text:      fmt.Sprintf(`Заказ MOSCOW-%04d успешно оплачен`, order.ID),
+		ParseMode: "HTML",
+	})
+	if err != nil {
+		logger.Errorf("sender.SendMessage: %v", err)
+	}
 }

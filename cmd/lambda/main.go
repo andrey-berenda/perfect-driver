@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/mymmrac/telego"
 
+	"github.com/andrey-berenda/perfect-driver/internal/pkg/log"
 	"github.com/andrey-berenda/perfect-driver/internal/pkg/storage"
 )
 
@@ -51,7 +52,7 @@ func (h Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
-	store := storage.New()
+	store := storage.New(log.NewLogger())
 	o, err := Parse(data.Body)
 	if err != nil {
 		sendMessage(data.Body, 0)
