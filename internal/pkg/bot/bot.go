@@ -17,7 +17,9 @@ import (
 	"github.com/andrey-berenda/perfect-driver/internal/pkg/storage"
 )
 
-const createOrder = "createOrder"
+const createOrderCallback = "createOrder"
+const arrivedCallback = "arrived"
+const orderCallback = "orderCallback"
 
 type MessageHandler func(ctx context.Context, update telego.Update) bool
 type CallbackHandler func(ctx context.Context, callback telego.CallbackQuery)
@@ -33,8 +35,6 @@ type Bot struct {
 	callbackHandlers map[string]CallbackHandler
 	logger           *zap.SugaredLogger
 }
-
-var arrived = "arrived"
 
 func New(
 	driverBot *telego.Bot,
@@ -59,9 +59,9 @@ func New(
 		"start": b.HandleStartCommand,
 	}
 	b.callbackHandlers = map[string]CallbackHandler{
-		createOrder: b.HandleCreateOrder,
-		"order":     b.HandleGetOrder,
-		arrived:     b.HandleArrived,
+		createOrderCallback: b.HandleCreateOrder,
+		orderCallback:       b.HandleGetOrder,
+		arrivedCallback:     b.HandleArrived,
 	}
 	return b
 }
@@ -183,7 +183,10 @@ func (b *Bot) HandleGetOrder(ctx context.Context, cb telego.CallbackQuery) {
 		ReplyMarkup: &telego.InlineKeyboardMarkup{
 			InlineKeyboard: [][]telego.InlineKeyboardButton{
 				{
-					{Text: "Я на месте", CallbackData: fmt.Sprintf("%s:%d", "arrived", order.ID)},
+					{
+						Text:         "Я на месте",
+						CallbackData: fmt.Sprintf("%s:%d", arrivedCallback, order.ID),
+					},
 				},
 			},
 		},
@@ -206,7 +209,7 @@ func (b *Bot) HandleStartCommand(ctx context.Context, update telego.Update) bool
 		ReplyMarkup: &telego.InlineKeyboardMarkup{
 			InlineKeyboard: [][]telego.InlineKeyboardButton{
 				{
-					{Text: "Создать заказ", CallbackData: createOrder},
+					{Text: "Создать заказ", CallbackData: createOrderCallback},
 				},
 			},
 		},
@@ -336,7 +339,10 @@ func (b *Bot) HandleMessage(ctx context.Context, update telego.Update) bool {
 			ReplyMarkup: &telego.InlineKeyboardMarkup{
 				InlineKeyboard: [][]telego.InlineKeyboardButton{
 					{
-						{Text: "Возьму заказ", CallbackData: fmt.Sprintf("%s:%d", "order", order.ID)},
+						{
+							Text:         "Возьму заказ",
+							CallbackData: fmt.Sprintf("%s:%d", orderCallback, order.ID),
+						},
 					},
 				},
 			},
