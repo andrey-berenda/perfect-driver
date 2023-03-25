@@ -19,7 +19,7 @@ import (
 
 const createOrderCallback = "createOrder"
 const arrivedCallback = "arrived"
-const orderCallback = "orderCallback"
+const orderCallback = "order"
 
 type MessageHandler func(ctx context.Context, update telego.Update) bool
 type CallbackHandler func(ctx context.Context, callback telego.CallbackQuery)

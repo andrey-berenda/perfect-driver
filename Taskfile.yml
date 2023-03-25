@@ -74,5 +74,5 @@ tasks:
       - build
       - test
     cmds:
-      - scp bin/bot ec2-user@ec2-3-236-208-235.compute-1.amazonaws.com:~
+      - scp bin/bot ec2-user@ec2-44-210-243-243.compute-1.amazonaws.com:~
     silent: false

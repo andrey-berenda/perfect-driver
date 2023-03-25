@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/mymmrac/telego"
 
-	"github.com/andrey-berenda/perfect-driver/internal/pkg/log"
 	"github.com/andrey-berenda/perfect-driver/internal/pkg/storage"
 )
 
@@ -54,14 +53,13 @@ func (h Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
-	store := storage.New(log.NewLogger())
 	o, err := Parse(data.Body)
 	if err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
 	}
 	bot, err := telego.NewBot("6281856678:AAGQdSTnZwoU5SPjXsa8IKVVnbZmriqS-0c")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if o.Name != "" {
@@ -74,15 +72,16 @@ func (h Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 		})
 		return nil, err
 	}
+	store := storage.New(nil)
 	order, err := store.OrderCreateFromLambda(ctx, o.Source, o.Destination, o.Time, o.Phone)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	sendMessage(order.ToDriverChat(), order.ID, bot)
+	err = sendMessage(order.ToDriverChat(), order.ID, bot)
 	return nil, err
 }
 
-func sendMessage(text string, orderID int, bot *telego.Bot) {
+func sendMessage(text string, orderID int, bot *telego.Bot) error {
 	_, err := bot.SendMessage(&telego.SendMessageParams{
 		ChatID: telego.ChatID{ID: -1001520856813},
 		Text:   text,
@@ -95,8 +94,9 @@ func sendMessage(text string, orderID int, bot *telego.Bot) {
 		},
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 func main() {
