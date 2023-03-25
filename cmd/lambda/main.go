@@ -22,6 +22,7 @@ type OrderData struct {
 	Destination string
 	Time        string
 	Phone       string
+	Name        string
 }
 
 func Parse(payload string) (OrderData, error) {
@@ -34,6 +35,7 @@ func Parse(payload string) (OrderData, error) {
 		return OrderData{}, fmt.Errorf("url.ParseQuery: %w", err)
 	}
 	return OrderData{
+		Name:        u.Get("Name"),
 		Phone:       u.Get("Phone"),
 		Time:        u.Get("Time"),
 		Source:      u.Get("Source"),
@@ -55,24 +57,33 @@ func (h Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 	store := storage.New(log.NewLogger())
 	o, err := Parse(data.Body)
 	if err != nil {
-		sendMessage(data.Body, 0)
 		return nil, fmt.Errorf("parse: %w", err)
 	}
+	bot, err := telego.NewBot("6281856678:AAGQdSTnZwoU5SPjXsa8IKVVnbZmriqS-0c")
+	if err != nil {
+		panic(err)
+	}
 
+	if o.Name != "" {
+		_, err = bot.SendMessage(&telego.SendMessageParams{
+			ChatID: telego.ChatID{ID: -908250161},
+			Text: fmt.Sprintf(`Новая заявка от водителя
+Телефон: %s
+Имя: %s
+`, o.Phone, o.Name),
+		})
+		return nil, err
+	}
 	order, err := store.OrderCreateFromLambda(ctx, o.Source, o.Destination, o.Time, o.Phone)
 	if err != nil {
 		panic(err)
 	}
-	sendMessage(order.ToDriverChat(), order.ID)
+	sendMessage(order.ToDriverChat(), order.ID, bot)
 	return nil, err
 }
 
-func sendMessage(text string, orderID int) {
-	driverBot, err := telego.NewBot("6281856678:AAGQdSTnZwoU5SPjXsa8IKVVnbZmriqS-0c")
-	if err != nil {
-		panic(err)
-	}
-	_, err = driverBot.SendMessage(&telego.SendMessageParams{
+func sendMessage(text string, orderID int, bot *telego.Bot) {
+	_, err := bot.SendMessage(&telego.SendMessageParams{
 		ChatID: telego.ChatID{ID: -1001520856813},
 		Text:   text,
 		ReplyMarkup: &telego.InlineKeyboardMarkup{
