@@ -2,10 +2,23 @@ version: '3'
 
 vars:
   COMMIT_ID: $(git log --format="%h" -n 1)
-  PROD_DB_ADDRESS: $(aws rds describe-db-instances --db-instance-identifier db --query 'DBInstances[*].Endpoint.Address' --profile driver --output text)
+  PROD_DB_ADDRESS: $(
+    aws rds describe-db-instances 
+      --db-instance-identifier db 
+      --query 'DBInstances[*].Endpoint.Address' 
+      --profile driver 
+      --output text
+    )
   ROOT: $(pwd)
   BIN_LINUX: $(echo {{.ROOT}}/bin/bot)
-  EC2_ADDRESS: $(aws ec2 describe-instances --filters 'Name=tag:Name,Values=Stack/EC2Instance' --query 'Reservations[*].Instances[*].PublicDnsName' --profile driver --output text)
+  EC2_ADDRESS: $(
+    aws ec2 describe-instances 
+      --filters 'Name=tag:Name,Values=Stack/EC2Instance' 
+      --filters 'Name=instance-state-name,Values=running' 
+      --query 'Reservations[*].Instances[*].PublicDnsName' 
+      --profile driver 
+      --output text
+    )
 
 silent: true
 
@@ -74,5 +87,5 @@ tasks:
       - build
       - test
     cmds:
-      - scp bin/bot ec2-user@ec2-44-210-243-243.compute-1.amazonaws.com:~
+      - scp bin/bot ec2-user@{{.EC2_ADDRESS}}:~
     silent: false
