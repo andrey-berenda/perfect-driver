@@ -19,6 +19,7 @@ import (
 
 const createOrderCallback = "createOrder"
 const arrivedCallback = "arrived"
+const finishedCallback = "finished"
 const orderCallback = "order"
 
 type MessageHandler func(ctx context.Context, update telego.Update) bool
@@ -62,6 +63,7 @@ func New(
 		createOrderCallback: b.HandleCreateOrder,
 		orderCallback:       b.HandleGetOrder,
 		arrivedCallback:     b.HandleArrived,
+		finishedCallback:    b.HandleFinished,
 	}
 	return b
 }
@@ -125,7 +127,7 @@ func (b *Bot) HandleArrived(ctx context.Context, cb telego.CallbackQuery) {
 	if order.TelegramID != 0 {
 		_, err = b.customerBot.SendMessage(&telego.SendMessageParams{
 			ChatID: telego.ChatID{ID: order.TelegramID},
-			Text:   "Водитель на месте, выходи",
+			Text:   fmt.Sprintf("Водитель Вас ожидает по адресу: %s", *order.Destination),
 		})
 		if err != nil {
 			b.logger.Errorf("store.SendMessage: %s", err)
@@ -134,7 +136,48 @@ func (b *Bot) HandleArrived(ctx context.Context, cb telego.CallbackQuery) {
 	}
 	_, err = b.driverBot.SendMessage(&telego.SendMessageParams{
 		ChatID: telego.ChatID{ID: cb.From.ID},
-		Text:   "Заказ завершен. Оплати пожалуйста его - https://yoomoney.ru/bill/pay/EOTdsQQlTMo.230415",
+		Text:   "Заказ в процессе",
+		ReplyMarkup: &telego.InlineKeyboardMarkup{
+			InlineKeyboard: [][]telego.InlineKeyboardButton{
+				{
+					{
+						Text:         "Завершить заказ",
+						CallbackData: fmt.Sprintf("%s:%d", finishedCallback, order.ID),
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		b.logger.Errorf("store.SendMessage: %s", err)
+	}
+}
+
+func (b *Bot) HandleFinished(ctx context.Context, cb telego.CallbackQuery) {
+	orderID, err := strconv.Atoi(strings.Split(cb.Data, ":")[1])
+	if err != nil {
+		b.logger.Errorf("strconv.Atoi: %s", err)
+		return
+	}
+	order, err := b.store.OrderGetByID(ctx, orderID)
+	if err != nil {
+		b.logger.Errorf("store.OrderGetByID(%d): %s", orderID, err)
+		return
+	}
+
+	if order.TelegramID != 0 {
+		_, err = b.customerBot.SendMessage(&telego.SendMessageParams{
+			ChatID: telego.ChatID{ID: order.TelegramID},
+			Text:   "Ваша поездка завершена. Спасибо что воспользовались услугами нашей компании!",
+		})
+		if err != nil {
+			b.logger.Errorf("store.SendMessage: %s", err)
+			return
+		}
+	}
+	_, err = b.driverBot.SendMessage(&telego.SendMessageParams{
+		ChatID: telego.ChatID{ID: cb.From.ID},
+		Text:   "Заказ завершен. Оплати пожалуйста его - https://yoomoney.ru/bill/pay/2zks2AQkgsA.230415",
 	})
 	if err != nil {
 		b.logger.Errorf("store.SendMessage: %s", err)
@@ -164,7 +207,7 @@ func (b *Bot) HandleGetOrder(ctx context.Context, cb telego.CallbackQuery) {
 	if order.TelegramID != 0 {
 		_, err = b.customerBot.SendMessage(&telego.SendMessageParams{
 			ChatID: telego.ChatID{ID: order.TelegramID},
-			Text:   "Водитель найден, ожидайте, с вами скоро свяжется водитель.",
+			Text:   "Водитель найден. Скоро он с Вами свяжется.",
 		})
 		if err != nil {
 			b.logger.Errorf("store.SendMessage: %s", err)
@@ -321,7 +364,7 @@ func (b *Bot) HandleMessage(ctx context.Context, update telego.Update) bool {
 
 		_, err = b.customerBot.SendMessage(&telego.SendMessageParams{
 			ChatID: telego.ChatID{ID: user.TelegramID},
-			Text:   "Заказ в обработке, ищем для Вас водителя",
+			Text:   "Заказ в обработке, мы скоро найдём Вам водителя...",
 		})
 		if err != nil {
 			b.logger.Errorf("customerBot.SendMessage: %v", err)

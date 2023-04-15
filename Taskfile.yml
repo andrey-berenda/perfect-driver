@@ -19,6 +19,14 @@ vars:
       --profile driver 
       --output text
     )
+  EC2_ID: $(
+    aws ec2 describe-instances
+    --filters 'Name=tag:Name,Values=HugStack/EC2Instance'
+    --filters 'Name=instance-state-name,Values=running'
+    --query 'Reservations[*].Instances[*].InstanceId'
+    --profile driver
+    --output text
+    )
 
 silent: true
 
@@ -82,10 +90,19 @@ tasks:
       - cdk deploy --profile driver
     silent: false
 
+  send-ssh-key:
+    cmds:
+      - aws ec2-instance-connect send-ssh-public-key
+        --instance-id {{.EC2_ID}}
+        --instance-os-user ec2-user
+        --profile driver
+        --ssh-public-key file://~/.ssh/id_ed25519.pub > /dev/null
+
   copy-to-ec2:
     deps:
       - build
       - test
+      - send-ssh-key
     cmds:
       - scp bin/bot ec2-user@{{.EC2_ADDRESS}}:~
     silent: false
