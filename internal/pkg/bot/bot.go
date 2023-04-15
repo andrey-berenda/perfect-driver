@@ -132,15 +132,9 @@ func (b *Bot) HandleArrived(ctx context.Context, cb telego.CallbackQuery) {
 			return
 		}
 	}
-
-	url, err := b.processor.CreatePayment(ctx, orderID)
-	if err != nil {
-		b.logger.Errorf("processor.CreatePayment: %s", err)
-	}
-
 	_, err = b.driverBot.SendMessage(&telego.SendMessageParams{
 		ChatID: telego.ChatID{ID: cb.From.ID},
-		Text:   fmt.Sprintf("Заказ завершен. Оплати пожалуйста его - %s", url),
+		Text:   "Заказ завершен. Оплати пожалуйста его - https://yoomoney.ru/bill/pay/EOTdsQQlTMo.230415",
 	})
 	if err != nil {
 		b.logger.Errorf("store.SendMessage: %s", err)

@@ -97,14 +97,6 @@ func main() {
 		wg.Done()
 	}()
 
-	wg.Add(1)
-	go func() {
-		logger.Info("Starting checking payments")
-		b.CheckPayments(ctx, store.PaymentsForCheckChan(ctx))
-		logger.Info("Checking payments stopped")
-		wg.Done()
-	}()
-
 	<-ctx.Done()
 
 	driverBot.StopLongPolling()
